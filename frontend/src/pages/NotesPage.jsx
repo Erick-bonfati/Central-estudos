@@ -1,34 +1,88 @@
 // src/pages/NotesPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './NotesPage.module.css';
+import { taskService } from '../services/taskService';
 
 function NotesPage() {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState({ title: '', content: '' });
   const [showForm, setShowForm] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false);
 
-  const addNote = () => {
-    if (newNote.title && newNote.content) {
-      setNotes([...notes, { ...newNote, id: Date.now() }]);
-      setNewNote({ title: '', content: '' });
-      setShowForm(false);
+  // Carregar anotações (que são as tarefas) quando o componente monta
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  const loadNotes = async () => {
+    try {
+      const tasksData = await taskService.getTasks();
+      // Converter tarefas em anotações
+      const notesData = tasksData.map(task => ({
+        id: task.id,
+        title: task.name,
+        content: task.completed ? '✅ Concluída' : '⏳ Em andamento',
+        completed: task.completed,
+        createdAt: task.createdAt
+      }));
+      setNotes(notesData);
+    } catch (error) {
+      console.error('Erro ao carregar anotações:', error);
     }
   };
 
-  const deleteNote = (id) => {
-    setNotes(notes.filter(note => note.id !== id));
+  const addNote = async () => {
+    if (newNote.title && newNote.content) {
+      try {
+        // Criar tarefa na API
+        const newTask = await taskService.createTask(newNote.title);
+        // Atualizar lista local
+        const newNoteData = {
+          id: newTask.id,
+          title: newTask.name,
+          content: '⏳ Em andamento',
+          completed: false,
+          createdAt: newTask.createdAt
+        };
+        setNotes([...notes, newNoteData]);
+        setNewNote({ title: '', content: '' });
+        setShowForm(false);
+      } catch (error) {
+        console.error('Erro ao criar anotação:', error);
+        alert('Erro ao criar anotação. Tente novamente.');
+      }
+    }
   };
+
+  const deleteNote = async (id) => {
+    try {
+      await taskService.deleteTask(id);
+      setNotes(notes.filter(note => note.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar anotação:', error);
+      alert('Erro ao deletar anotação. Tente novamente.');
+    }
+  };
+
 
   return (
     <div className={styles.notesPage}>
       <div className={styles.notesHeader}>
         <h1>Minhas Anotações</h1>
-        <button 
-          className="btn" 
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? 'Cancelar' : '+ Nova Anotação'}
-        </button>
+        <div className={styles.headerButtons}>
+          <button 
+            className="btn" 
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? 'Cancelar' : '+ Nova Anotação'}
+          </button>
+          <button 
+            className={`btn ${hideCompleted ? 'secondary' : ''}`}
+            onClick={() => setHideCompleted(!hideCompleted)}
+          >
+            {hideCompleted ? 'Mostrar Concluídas' : 'Ocultar Concluídas'}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -59,8 +113,10 @@ function NotesPage() {
       )}
 
       <div className={styles.notesGrid}>
-        {notes.map(note => (
-          <div key={note.id} className={styles.noteCard}>
+        {notes
+          .filter(note => !hideCompleted || !note.completed)
+          .map(note => (
+          <div key={note.id} className={`${styles.noteCard} ${note.completed ? styles.completed : ''}`}>
             <div className={styles.noteHeader}>
               <h3>{note.title}</h3>
               <button 
@@ -79,11 +135,18 @@ function NotesPage() {
         ))}
       </div>
 
-      {notes.length === 0 && (
+      {notes.filter(note => !hideCompleted || !note.completed).length === 0 && (
         <div className="card empty-state">
           <div className={styles.emptyIcon}>📝</div>
-          <h3>Nenhuma anotação ainda</h3>
-          <p>Crie sua primeira anotação clicando no botão acima!</p>
+          <h3>
+            {hideCompleted ? 'Nenhuma tarefa pendente' : 'Nenhuma anotação ainda'}
+          </h3>
+          <p>
+            {hideCompleted 
+              ? 'Todas as tarefas foram concluídas! 🎉' 
+              : 'Crie sua primeira anotação clicando no botão acima! Ela aparecerá automaticamente no Timer Pomodoro.'
+            }
+          </p>
         </div>
       )}
     </div>

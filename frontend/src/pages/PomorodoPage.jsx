@@ -1,6 +1,7 @@
 // src/pages/PomodoroPage.jsx
 import React, { useState, useEffect } from 'react';
 import styles from './PomodoroPage.module.css';
+import { taskService } from '../services/taskService';
 
 function PomodoroPage() {
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutos em segundos
@@ -9,19 +10,33 @@ function PomodoroPage() {
   const [sessionCount, setSessionCount] = useState(0);
   
   // Estados para tarefas
-  const [tasks, setTasks] = useState([
-    { id: 1, name: 'Matemática - Álgebra', completed: false },
-    { id: 2, name: 'História - Idade Média', completed: false },
-    { id: 3, name: 'Português - Gramática', completed: false }
-  ]);
+  const [tasks, setTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [newTaskName, setNewTaskName] = useState('');
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const modes = {
     work: { duration: 25 * 60, label: 'Trabalho', color: '#e53e3e' },
     break: { duration: 5 * 60, label: 'Pausa Curta', color: '#38a169' },
     longBreak: { duration: 15 * 60, label: 'Pausa Longa', color: '#3182ce' }
+  };
+
+  // Carregar tarefas da API quando o componente monta
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    setLoading(true);
+    try {
+      const tasksData = await taskService.getTasks();
+      setTasks(tasksData);
+    } catch (error) {
+      console.error('Erro ao carregar tarefas:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -71,16 +86,17 @@ function PomodoroPage() {
   };
 
   // Funções para gerenciar tarefas
-  const addTask = () => {
+  const addTask = async () => {
     if (newTaskName.trim()) {
-      const newTask = {
-        id: Date.now(),
-        name: newTaskName.trim(),
-        completed: false
-      };
-      setTasks([...tasks, newTask]);
-      setNewTaskName('');
-      setShowTaskForm(false);
+      try {
+        const newTask = await taskService.createTask(newTaskName.trim());
+        setTasks([...tasks, newTask]);
+        setNewTaskName('');
+        setShowTaskForm(false);
+      } catch (error) {
+        console.error('Erro ao criar tarefa:', error);
+        alert('Erro ao criar tarefa. Tente novamente.');
+      }
     }
   };
 
@@ -88,14 +104,20 @@ function PomodoroPage() {
     setSelectedTask(task);
   };
 
-  const completeTask = () => {
+  const completeTask = async () => {
     if (selectedTask) {
-      setTasks(tasks.map(task => 
-        task.id === selectedTask.id 
-          ? { ...task, completed: true }
-          : task
-      ));
-      setSelectedTask(null);
+      try {
+        await taskService.updateTask(selectedTask.id, true);
+        setTasks(tasks.map(task => 
+          task.id === selectedTask.id 
+            ? { ...task, completed: true }
+            : task
+        ));
+        setSelectedTask(null);
+      } catch (error) {
+        console.error('Erro ao completar tarefa:', error);
+        alert('Erro ao completar tarefa. Tente novamente.');
+      }
     }
   };
 
@@ -118,6 +140,8 @@ function PomodoroPage() {
         {/* Seção de Tarefas */}
         <div className={styles.taskSection}>
           <h3>Selecione uma tarefa para focar:</h3>
+          
+          {loading && <p>Carregando tarefas...</p>}
           
           {selectedTask && (
             <div className={styles.selectedTask}>
