@@ -1,0 +1,75 @@
+/* HomePage.module.css - Estilos específicos da página inicial */
+
+.homepage {
+  text-align: center;
+}
+
+.heroSection {
+  margin-bottom: 3rem;
+}
+
+.heroSection h1 {
+  font-size: 3rem;
+  color: white;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.heroSection p {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.featureCard {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.featureCard:hover {
+  transform: translateY(-5px);
+}
+
+.featureIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.featureCard h3 {
+  color: #4a5568;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.featureCard p {
+  color: #718096;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.tipsList {
+  text-align: left;
+  list-style: none;
+  padding: 0;
+}
+
+.tipsList li {
+  background: rgba(102, 126, 234, 0.1);
+  margin-bottom: 0.8rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  color: #4a5568;
+}

@@ -1,0 +1,131 @@
+/* NotesPage.module.css - Estilos específicos da página de anotações */
+
+.notesPage {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.notesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.notesHeader h1 {
+  color: white;
+  font-size: 2.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.noteForm {
+  margin-bottom: 2rem;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.formInput, .formTextarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  background: white;
+}
+
+.formInput:focus, .formTextarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.formTextarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.notesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.noteCard {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.noteCard:hover {
+  transform: translateY(-3px);
+}
+
+.noteHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.noteHeader h3 {
+  color: #4a5568;
+  font-size: 1.2rem;
+  margin: 0;
+  flex: 1;
+}
+
+.deleteBtn {
+  background: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.deleteBtn:hover {
+  background: #c53030;
+}
+
+.noteCard p {
+  color: #718096;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.noteDate {
+  font-size: 0.85rem;
+  color: #a0aec0;
+  font-style: italic;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+}
+
+.emptyIcon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.emptyState h3 {
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+}
+
+.emptyState p {
+  color: #718096;
+}

@@ -1,0 +1,140 @@
+/* src/components/Header.module.css */
+
+.header {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  width: 100%;
+  position: relative;
+  z-index: 100;
+}
+
+.logo a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.navLinks {
+  display: flex;
+  gap: 1.5rem; /* Espaçamento entre os links */
+}
+
+.navLinks a {
+  color: #dcdcdc; /* Um cinza claro */
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navLinks a:hover, .navLinks a.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* --- Responsividade --- */
+
+.hamburger {
+  display: none; /* Escondido em telas grandes */
+  flex-direction: column;
+  justify-content: space-around;
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 150;
+}
+
+.hamburger div {
+  width: 2rem;
+  height: 0.25rem;
+  background: white;
+  border-radius: 10px;
+  transition: all 0.3s linear;
+}
+
+/* Esconde a navegação normal e mostra o hambúrguer em telas menores */
+@media (max-width: 768px) {
+  .navLinks {
+    display: none;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+}
+
+.mobileNavLinks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 300px;
+  padding: 2rem;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  z-index: 200;
+  border-radius: 0 0 15px 15px;
+}
+
+.mobileNavLinks.open {
+  transform: translateX(0);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+  z-index: 300;
+}
+
+.closeBtn:hover {
+  background: #c53030;
+}
+
+.mobileNavLinks a {
+  color: #4a5568;
+  text-decoration: none;
+  font-size: 1.3rem;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  text-align: center;
+  width: 80%;
+  display: block;
+}
+
+.mobileNavLinks a:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  transform: scale(1.05);
+}

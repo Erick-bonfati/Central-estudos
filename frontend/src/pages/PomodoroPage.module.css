@@ -1,0 +1,315 @@
+/* PomodoroPage.module.css - Estilos específicos da página do timer Pomodoro */
+
+.pomodoroPage {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.pomodoroHeader h1 {
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pomodoroHeader p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.pomodoroContainer {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Estilos para seção de tarefas */
+.taskSection {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 15px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.taskSection h3 {
+  color: #4a5568;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.selectedTask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #667eea;
+}
+
+.taskLabel {
+  color: #4a5568;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.taskName {
+  color: #2d3748;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex: 1;
+  margin: 0 1rem;
+}
+
+.completeBtn {
+  background: #38a169;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.completeBtn:hover {
+  background: #2f855a;
+}
+
+.taskList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.taskBtn {
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #4a5568;
+  flex: 1;
+  min-width: 120px;
+}
+
+.taskBtn:hover {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+}
+
+.taskBtn.selected {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.addTaskBtn {
+  background: #e2e8f0;
+  color: #4a5568;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.addTaskBtn:hover {
+  background: #cbd5e0;
+}
+
+.taskForm {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.taskInput {
+  flex: 1;
+  padding: 0.8rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+}
+
+.taskInput:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.saveTaskBtn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.saveTaskBtn:hover {
+  background: #5a67d8;
+}
+
+.modeSelector {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.modeBtn {
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  padding: 0.8rem 1.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #4a5568;
+}
+
+.modeBtn:hover {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+}
+
+.modeBtn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.timerDisplay {
+  margin: 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.timerCircle {
+  position: relative;
+  display: inline-block;
+}
+
+.progressRing {
+  transform: rotate(-90deg);
+}
+
+.timerContent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.timerTime {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+}
+
+.timerMode {
+  font-size: 1.2rem;
+  color: #718096;
+  font-weight: 600;
+}
+
+.timerControls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.controlBtn {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  min-width: 120px;
+}
+
+.controlBtn.secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.controlBtn.secondary:hover {
+  background: #cbd5e0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.pomodoroInfo {
+  margin-top: 2rem;
+}
+
+.infoCard {
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: left;
+}
+
+.infoCard h3 {
+  color: #4a5568;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.infoCard ul {
+  list-style: none;
+  padding: 0;
+}
+
+.infoCard li {
+  color: #4a5568;
+  margin-bottom: 0.8rem;
+  padding: 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .timerTime {
+    font-size: 2.5rem;
+  }
+  
+  .modeSelector {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .modeBtn {
+    width: 200px;
+  }
+  
+  .timerControls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .controlBtn {
+    width: 200px;
+  }
+}
