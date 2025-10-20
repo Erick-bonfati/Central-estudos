@@ -1,15 +1,15 @@
 // Serviço para gerenciar tarefas via API
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = "http://localhost:3001";
 
 export const taskService = {
   // Buscar todas as tarefas
   async getTasks() {
     try {
       const response = await fetch(`${API_BASE_URL}/tasks`);
-      if (!response.ok) throw new Error('Erro ao buscar tarefas');
+      if (!response.ok) throw new Error("Erro ao buscar tarefas");
       return await response.json();
     } catch (error) {
-      console.error('Erro ao buscar tarefas:', error);
+      console.error("Erro ao buscar tarefas:", error);
       return [];
     }
   },
@@ -18,16 +18,16 @@ export const taskService = {
   async createTask(name) {
     try {
       const response = await fetch(`${API_BASE_URL}/tasks`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ name }),
       });
-      if (!response.ok) throw new Error('Erro ao criar tarefa');
+      if (!response.ok) throw new Error("Erro ao criar tarefa");
       return await response.json();
     } catch (error) {
-      console.error('Erro ao criar tarefa:', error);
+      console.error("Erro ao criar tarefa:", error);
       throw error;
     }
   },
@@ -36,16 +36,16 @@ export const taskService = {
   async updateTask(id, completed) {
     try {
       const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ completed }),
       });
-      if (!response.ok) throw new Error('Erro ao atualizar tarefa');
+      if (!response.ok) throw new Error("Erro ao atualizar tarefa");
       return await response.json();
     } catch (error) {
-      console.error('Erro ao atualizar tarefa:', error);
+      console.error("Erro ao atualizar tarefa:", error);
       throw error;
     }
   },
@@ -54,13 +54,62 @@ export const taskService = {
   async deleteTask(id) {
     try {
       const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!response.ok) throw new Error('Erro ao deletar tarefa');
+      if (!response.ok) throw new Error("Erro ao deletar tarefa");
       return await response.json();
     } catch (error) {
-      console.error('Erro ao deletar tarefa:', error);
+      console.error("Erro ao deletar tarefa:", error);
       throw error;
+    }
+  },
+
+  // Adicionar card a uma tarefa
+  async addCard(taskId, title) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/cards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (!res.ok) throw new Error("Erro ao adicionar card");
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  },
+
+  // Atualizar card (concluir)
+  async updateCard(taskId, cardIndex, done) {
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/tasks/${taskId}/cards/${cardIndex}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ done }),
+        }
+      );
+      if (!res.ok) throw new Error("Erro ao atualizar card");
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  },
+
+  // Deletar card específico
+  async deleteCard(taskId, cardIndex) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/cards/${cardIndex}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) throw new Error('Erro ao deletar card')
+      return await response.json()
+    } catch (error) {
+      console.error('Erro ao deletar card:', error)
+      throw error
     }
   }
 };
