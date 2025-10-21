@@ -1,115 +1,160 @@
-// Serviço para gerenciar tarefas via API
 const API_BASE_URL = "http://localhost:3001";
 
+function getHeaders() {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    Authorization: token ? `Bearer ${token}` : "",
+  };
+}
+
+function isLoggedIn() {
+  return !!localStorage.getItem("token");
+}
+
 export const taskService = {
-  // Buscar todas as tarefas
   async getTasks() {
+    if (!isLoggedIn()) {
+      // modo offline
+      return JSON.parse(localStorage.getItem("localTasks") || "[]");
+    }
+
     try {
-      const response = await fetch(`${API_BASE_URL}/tasks`);
-      if (!response.ok) throw new Error("Erro ao buscar tarefas");
-      return await response.json();
+      const res = await fetch(`${API_BASE_URL}/tasks`, { headers: getHeaders() });
+      if (!res.ok) throw new Error("Erro ao buscar tarefas");
+      const data = await res.json();
+      localStorage.setItem("localTasks", JSON.stringify(data)); // sincroniza cache local
+      return data;
     } catch (error) {
       console.error("Erro ao buscar tarefas:", error);
       return [];
     }
   },
 
-  // Criar nova tarefa
   async createTask(name) {
+    if (!isLoggedIn()) {
+      const localTasks = JSON.parse(localStorage.getItem("localTasks") || "[]");
+      const newTask = {
+        _id: Date.now().toString(),
+        name,
+        completed: false,
+        cards: [],
+        local: true,
+      };
+      localStorage.setItem("localTasks", JSON.stringify([...localTasks, newTask]));
+      return newTask;
+    }
+
     try {
-      const response = await fetch(`${API_BASE_URL}/tasks`, {
+      const res = await fetch(`${API_BASE_URL}/tasks`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ name }),
       });
-      if (!response.ok) throw new Error("Erro ao criar tarefa");
-      return await response.json();
+      if (!res.ok) throw new Error("Erro ao criar tarefa");
+      return await res.json();
     } catch (error) {
       console.error("Erro ao criar tarefa:", error);
       throw error;
     }
   },
 
-  // Atualizar tarefa (marcar como completa)
   async updateTask(id, completed) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ completed }),
-      });
-      if (!response.ok) throw new Error("Erro ao atualizar tarefa");
-      return await response.json();
-    } catch (error) {
-      console.error("Erro ao atualizar tarefa:", error);
-      throw error;
+    if (!isLoggedIn()) {
+      const localTasks = JSON.parse(localStorage.getItem("localTasks") || "[]");
+      const updated = localTasks.map(t => (t._id === id ? { ...t, completed } : t));
+      localStorage.setItem("localTasks", JSON.stringify(updated));
+      return updated.find(t => t._id === id);
     }
+
+    const res = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: "PUT",
+      headers: getHeaders(),
+      body: JSON.stringify({ completed }),
+    });
+    if (!res.ok) throw new Error("Erro ao atualizar tarefa");
+    return await res.json();
   },
 
-  // Deletar tarefa
   async deleteTask(id) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Erro ao deletar tarefa");
-      return await response.json();
-    } catch (error) {
-      console.error("Erro ao deletar tarefa:", error);
-      throw error;
+    if (!isLoggedIn()) {
+      const localTasks = JSON.parse(localStorage.getItem("localTasks") || "[]");
+      const updated = localTasks.filter(t => t._id !== id);
+      localStorage.setItem("localTasks", JSON.stringify(updated));
+      return { success: true };
     }
+
+    const res = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error("Erro ao deletar tarefa");
+    return await res.json();
   },
 
-  // Adicionar card a uma tarefa
   async addCard(taskId, title) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/cards`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      if (!res.ok) throw new Error("Erro ao adicionar card");
-      return await res.json();
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
-  },
-
-  // Atualizar card (concluir)
-  async updateCard(taskId, cardIndex, done) {
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/tasks/${taskId}/cards/${cardIndex}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ done }),
-        }
+    if (!isLoggedIn()) {
+      const localTasks = JSON.parse(localStorage.getItem("localTasks") || "[]");
+      const updated = localTasks.map(t =>
+        t._id === taskId ? { ...t, cards: [...t.cards, { title, done: false }] } : t
       );
-      if (!res.ok) throw new Error("Erro ao atualizar card");
-      return await res.json();
-    } catch (err) {
-      console.error(err);
-      throw err;
+      localStorage.setItem("localTasks", JSON.stringify(updated));
+      return updated.find(t => t._id === taskId);
     }
+
+    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/cards`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new Error("Erro ao adicionar card");
+    return await res.json();
   },
 
-  // Deletar card específico
-  async deleteCard(taskId, cardIndex) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/cards/${cardIndex}`, {
-        method: 'DELETE'
-      })
-      if (!response.ok) throw new Error('Erro ao deletar card')
-      return await response.json()
-    } catch (error) {
-      console.error('Erro ao deletar card:', error)
-      throw error
+  async updateCard(taskId, cardIndex, done) {
+    if (!isLoggedIn()) {
+      const localTasks = JSON.parse(localStorage.getItem("localTasks") || "[]");
+      const updated = localTasks.map(t => {
+        if (t._id === taskId) {
+          const cards = [...t.cards];
+          if (cards[cardIndex]) cards[cardIndex].done = done;
+          return { ...t, cards };
+        }
+        return t;
+      });
+      localStorage.setItem("localTasks", JSON.stringify(updated));
+      return updated.find(t => t._id === taskId);
     }
-  }
+
+    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/cards/${cardIndex}`, {
+      method: "PUT",
+      headers: getHeaders(),
+      body: JSON.stringify({ done }),
+    });
+    if (!res.ok) throw new Error("Erro ao atualizar card");
+    return await res.json();
+  },
+
+  async deleteCard(taskId, cardIndex) {
+    if (!isLoggedIn()) {
+      const localTasks = JSON.parse(localStorage.getItem("localTasks") || "[]");
+      const updated = localTasks.map(t => {
+        if (t._id === taskId) {
+          const cards = [...t.cards];
+          cards.splice(cardIndex, 1);
+          return { ...t, cards };
+        }
+        return t;
+      });
+      localStorage.setItem("localTasks", JSON.stringify(updated));
+      return updated.find(t => t._id === taskId);
+    }
+
+    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/cards/${cardIndex}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error("Erro ao deletar card");
+    return await res.json();
+  },
 };

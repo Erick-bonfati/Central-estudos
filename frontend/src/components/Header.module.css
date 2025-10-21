@@ -62,6 +62,27 @@
   transition: all 0.3s linear;
 }
 
+.logoutBtn {
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.3s ease, background 0.3s ease;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.logoutBtn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.logoutBtn:focus {
+  outline: none;
+}
+
 /* Esconde a navegação normal e mostra o hambúrguer em telas menores */
 @media (max-width: 768px) {
   .navLinks {
@@ -70,6 +91,20 @@
 
   .hamburger {
     display: flex;
+  }
+
+  .logoutBtn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 0;
+    background: none;
+    color: white;
+    border: none;
+  }
+  .logoutBtn:hover {
+    color: #cbd5e0;
+    background: none;
   }
 }
 

@@ -1,0 +1,10 @@
+@import './LoginPage.module.css';
+
+/* herdamos o mesmo estilo do LoginPage */
+.title {
+  color: #2d3748;
+}
+
+.subtitle {
+  color: #718096;
+}
