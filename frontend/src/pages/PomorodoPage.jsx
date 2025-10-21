@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react"
 import styles from "./PomodoroPage.module.css"
 import { taskService } from "../services/taskService"
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from "recharts"
 
-// Sons (coloca em /public/sounds/)
 const startSound = "/sounds/start.wav"
 const pauseSound = "/sounds/pause.wav"
 const warningSound = "/sounds/warning.wav"
@@ -17,6 +19,8 @@ function PomodoroPage() {
   const [selectedTask, setSelectedTask] = useState(null)
   const [newTaskName, setNewTaskName] = useState("")
   const [showTaskForm, setShowTaskForm] = useState(false)
+  const [showStats, setShowStats] = useState(true)
+  const [stats, setStats] = useState({ daily: 0, weekly: 0, monthly: 0 })
 
   const modes = {
     work: { duration: 25 * 60, label: "Trabalho", color: "#e53e3e" },
@@ -39,9 +43,46 @@ function PomodoroPage() {
         const updated = data.find((t) => t._id === selectedTask._id)
         setSelectedTask(updated || null)
       }
+      calculateStats(data)
     } catch (err) {
       console.error(err)
     }
+  }
+
+  // ==========================
+  // CÁLCULO DE ESTATÍSTICAS
+  // ==========================
+  const calculateStats = (tasks) => {
+    const now = new Date()
+    const today = now.toDateString()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - 6)
+
+    let daily = 0, weekly = 0, monthly = 0
+    const weekData = {}
+
+    tasks.forEach((task) => {
+      task.sessions?.forEach((s) => {
+        const d = new Date(s.date)
+        const dayLabel = d.toLocaleDateString("pt-BR", { weekday: "short" })
+        weekData[dayLabel] = (weekData[dayLabel] || 0) + s.duration / 60
+
+        if (d.toDateString() === today) daily += s.duration
+        if (d >= startOfWeek) weekly += s.duration
+        if (d.getMonth() === now.getMonth()) monthly += s.duration
+      })
+    })
+
+    // calcular dias ativos e streak
+    const daysActive = Object.keys(weekData).length
+    const streak = daysActive > 0 ? Math.min(daysActive, 7) : 0
+
+    const weeklyChart = Object.entries(weekData).map(([day, hours]) => ({
+      day,
+      hours: parseFloat(hours.toFixed(1))
+    }))
+
+    setStats({ daily, weekly, monthly, activeDays: daysActive, streak, weeklyChart })
   }
 
   // ==========================
@@ -84,24 +125,26 @@ function PomodoroPage() {
       interval = setInterval(() => {
         setTimeLeft((t) => {
           const newTime = t - 1
-
-          // toca aviso quando faltar 5 minutos em QUALQUER modo
           if (newTime === 5 * 60) playSound(warningSound)
-
-          // toca som de fim quando chegar a zero
           if (newTime === 0) playSound(endSound)
-
           return newTime
         })
       }, 1000)
     } else if (timeLeft === 0) {
       setIsRunning(false)
-      // alterna modo automaticamente
+
       if (mode === "work") {
         setSessionCount((c) => (c + 1) % 4)
         const nextMode = sessionCount + 1 >= 4 ? "longBreak" : "break"
         setMode(nextMode)
         setTimeLeft(modes[nextMode].duration)
+
+        // REGISTRAR SESSÃO
+        if (selectedTask) {
+          taskService.addSession(selectedTask._id, modes.work.duration / 60)
+            .then(() => loadTasks())
+            .catch(console.error)
+        }
       } else {
         setMode("work")
         setTimeLeft(modes.work.duration)
@@ -166,6 +209,50 @@ function PomodoroPage() {
   // ==========================
   return (
     <div className={styles.pomodoroPage}>
+      {/* Painel de estatísticas */}
+      <div className={styles.statsToggle}>
+        <button
+          className={styles.toggleBtn}
+          onClick={() => setShowStats(!showStats)}
+        >
+          {showStats ? "Ocultar estatísticas ▲" : "Mostrar estatísticas ▼"}
+        </button>
+      </div>
+
+      {showStats && (
+        <div className={styles.statsSection}>
+          <h2 className={styles.statsTitle}>Resumo de Atividades</h2>
+
+          <div className={styles.statsSummary}>
+            <div className={styles.statBox}>
+              <span className={styles.statValue}>{Math.round(stats.monthly / 60)}</span>
+              <span className={styles.statLabel}>Horas focadas</span>
+            </div>
+            <div className={styles.statBox}>
+              <span className={styles.statValue}>{stats.activeDays || 0}</span>
+              <span className={styles.statLabel}>Dias ativos</span>
+            </div>
+            <div className={styles.statBox}>
+              <span className={styles.statValue}>{stats.streak || 0}</span>
+              <span className={styles.statLabel}>Dias seguidos</span>
+            </div>
+          </div>
+
+          <h3 className={styles.chartTitle}>Horas focadas (últimos 7 dias)</h3>
+          <div className={styles.chartWrapper}>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={stats.weeklyChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="hours" fill="#6c63ff" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       <div className={styles.pomodoroHeader}>
         <h1>Timer Pomodoro</h1>
         <p>Sessões completadas: {sessionCount}</p>
@@ -318,7 +405,7 @@ function PomodoroPage() {
               </div>
             </div>
           )}
-          
+
           {/* Criar nova tarefa */}
           <button
             className={styles.addTaskBtn}

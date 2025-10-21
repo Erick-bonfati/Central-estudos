@@ -157,4 +157,16 @@ export const taskService = {
     if (!res.ok) throw new Error("Erro ao deletar card");
     return await res.json();
   },
+
+  async addSession(taskId, duration) {
+    const token = localStorage.getItem("token");
+    await fetch(`${API_BASE_URL}/tasks/${taskId}/sessions`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ duration })
+    });
+  },
 };
