@@ -159,14 +159,29 @@ export const taskService = {
   },
 
   async addSession(taskId, duration) {
+    // modo offline
+    if (!isLoggedIn()) {
+      const localTasks = JSON.parse(localStorage.getItem("localTasks") || "[]");
+      const updated = localTasks.map(t => {
+        if (t._id === taskId) {
+          const sessions = Array.isArray(t.sessions) ? [...t.sessions] : [];
+          sessions.push({ date: new Date().toISOString(), duration: Number(duration) || 0 });
+          return { ...t, sessions };
+        }
+        return t;
+      });
+      localStorage.setItem("localTasks", JSON.stringify(updated));
+      return { success: true };
+    }
+
     const token = localStorage.getItem("token");
     await fetch(`${API_BASE_URL}/tasks/${taskId}/sessions`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ duration })
+      body: JSON.stringify({ duration }),
     });
   },
 };

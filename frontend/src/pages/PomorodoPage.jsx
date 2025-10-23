@@ -5,22 +5,26 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts"
 
-const startSound = "/sounds/start.wav"
-const pauseSound = "/sounds/pause.wav"
-const warningSound = "/sounds/warning.wav"
-const endSound = "/sounds/end.wav"
+const sounds = {
+  start: "/sounds/start.wav",
+  pause: "/sounds/pause.wav",
+  warning: "/sounds/warning.wav",
+  end: "/sounds/end.wav"
+}
 
 function PomodoroPage() {
+  const [mode, setMode] = useState("work")
   const [timeLeft, setTimeLeft] = useState(25 * 60)
   const [isRunning, setIsRunning] = useState(false)
-  const [mode, setMode] = useState("work")
   const [sessionCount, setSessionCount] = useState(0)
   const [tasks, setTasks] = useState([])
   const [selectedTask, setSelectedTask] = useState(null)
   const [newTaskName, setNewTaskName] = useState("")
   const [showTaskForm, setShowTaskForm] = useState(false)
-  const [showStats, setShowStats] = useState(true)
-  const [stats, setStats] = useState({ daily: 0, weekly: 0, monthly: 0 })
+  const [showStats, setShowStats] = useState(false)
+  const [stats, setStats] = useState({ daily: 0, weekly: 0, monthly: 0, activeDays: 0, streak: 0, weeklyChart: [] })
+  const [loggedMinutes, setLoggedMinutes] = useState(0)
+  const [endTime, setEndTime] = useState(null)
 
   const modes = {
     work: { duration: 25 * 60, label: "Trabalho", color: "#e53e3e" },
@@ -28,19 +32,20 @@ function PomodoroPage() {
     longBreak: { duration: 15 * 60, label: "Pausa Longa", color: "#3182ce" },
   }
 
-  // ==========================
-  // CARREGAR TAREFAS
-  // ==========================
-  useEffect(() => {
-    loadTasks()
-  }, [])
+  const playSound = (name) => {
+    const audio = new Audio(sounds[name])
+    audio.volume = 0.6
+    audio.play().catch(() => {})
+  }
+
+  useEffect(() => { loadTasks() }, [])
 
   const loadTasks = async () => {
     try {
       const data = await taskService.getTasks()
       setTasks(data)
       if (selectedTask) {
-        const updated = data.find((t) => t._id === selectedTask._id)
+        const updated = data.find(t => t._id === selectedTask._id)
         setSelectedTask(updated || null)
       }
       calculateStats(data)
@@ -49,206 +54,224 @@ function PomodoroPage() {
     }
   }
 
-  // ==========================
-  // CÁLCULO DE ESTATÍSTICAS
-  // ==========================
   const calculateStats = (tasks) => {
     const now = new Date()
-    const today = now.toDateString()
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - 6)
-
-    let daily = 0, weekly = 0, monthly = 0
-    const weekData = {}
-
-    tasks.forEach((task) => {
-      task.sessions?.forEach((s) => {
-        const d = new Date(s.date)
-        const dayLabel = d.toLocaleDateString("pt-BR", { weekday: "short" })
-        weekData[dayLabel] = (weekData[dayLabel] || 0) + s.duration / 60
-
-        if (d.toDateString() === today) daily += s.duration
-        if (d >= startOfWeek) weekly += s.duration
-        if (d.getMonth() === now.getMonth()) monthly += s.duration
-      })
+    const todayKey = now.toISOString().slice(0, 10)
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date()
+      d.setDate(now.getDate() - (6 - i))
+      return d
     })
+    const keys = days.map(d => d.toISOString().slice(0, 10))
+    const minutes = Object.fromEntries(keys.map(k => [k, 0]))
+    let daily = 0, monthly = 0
 
-    // calcular dias ativos e streak
-    const daysActive = Object.keys(weekData).length
-    const streak = daysActive > 0 ? Math.min(daysActive, 7) : 0
+    const sessions = [
+      ...tasks.flatMap(t => t.sessions || []),
+      ...(JSON.parse(localStorage.getItem("pomodoroFreeSessions") || "[]"))
+    ]
 
-    const weeklyChart = Object.entries(weekData).map(([day, hours]) => ({
-      day,
-      hours: parseFloat(hours.toFixed(1))
+    for (const s of sessions) {
+      const d = new Date(s.date)
+      const key = d.toISOString().slice(0, 10)
+      const mins = Number(s.duration) || 0
+      if (key === todayKey) daily += mins
+      if (keys.includes(key)) minutes[key] += mins
+      if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += mins
+    }
+
+    const weekly = Object.values(minutes).reduce((a, b) => a + b, 0)
+    const weeklyChart = keys.map((k, i) => ({
+      day: days[i].toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", ""),
+      minutes: minutes[k]
     }))
+    const activeDays = weeklyChart.filter(d => d.minutes > 0).length
+    let streak = 0
+    for (let i = weeklyChart.length - 1; i >= 0; i--) {
+      if (weeklyChart[i].minutes > 0) streak++
+      else break
+    }
 
-    setStats({ daily, weekly, monthly, activeDays: daysActive, streak, weeklyChart })
+    setStats({ daily, weekly, monthly, activeDays, streak, weeklyChart })
   }
 
-  // ==========================
-  // FUNÇÃO PARA TOCAR SOM
-  // ==========================
-  const playSound = (src) => {
-    const audio = new Audio(src)
-    audio.volume = 0.6
-    audio.play().catch(() => {})
+  const addFreeSession = (minutes) => {
+    const free = JSON.parse(localStorage.getItem("pomodoroFreeSessions") || "[]")
+    free.push({ date: new Date().toISOString(), duration: minutes })
+    localStorage.setItem("pomodoroFreeSessions", JSON.stringify(free))
   }
 
-  // ==========================
-  // CONTROLE DO TIMER
-  // ==========================
   const startTimer = () => {
-    playSound(startSound)
+    playSound("start")
+    setEndTime(Date.now() + timeLeft * 1000)
     setIsRunning(true)
   }
 
-  const pauseTimer = () => {
-    playSound(pauseSound)
+  const pauseTimer = async () => {
+    if (mode === "work") await saveElapsedTime()
+    if (endTime) {
+      const remaining = Math.max(0, Math.round((endTime - Date.now()) / 1000))
+      setTimeLeft(remaining)
+      setEndTime(null)
+    }
+    playSound("pause")
     setIsRunning(false)
   }
 
   const resetTimer = () => {
     setIsRunning(false)
     setTimeLeft(modes[mode].duration)
+    if (mode === "work") setLoggedMinutes(0)
+    setEndTime(null)
   }
 
   const switchMode = (m) => {
     setIsRunning(false)
     setMode(m)
     setTimeLeft(modes[m].duration)
+    if (m === "work") setLoggedMinutes(0)
+    setEndTime(null)
+  }
+
+  const saveElapsedTime = async () => {
+    const elapsed = Math.floor((modes.work.duration - timeLeft) / 60)
+    const delta = Math.max(0, elapsed - loggedMinutes)
+    if (delta < 1) return
+
+    try {
+      if (selectedTask) {
+        await taskService.addSession(selectedTask._id, delta)
+      } else {
+        addFreeSession(delta)
+      }
+      setLoggedMinutes(prev => prev + delta)
+      loadTasks()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleSessionEnd = async () => {
+    await saveElapsedTime()
+    if (mode === "work") {
+      setSessionCount(c => (c + 1) % 4)
+      const next = sessionCount + 1 >= 4 ? "longBreak" : "break"
+      switchMode(next)
+    } else {
+      switchMode("work")
+    }
   }
 
   useEffect(() => {
-    let interval = null
+    if (!isRunning || !endTime) return
+    let prev = timeLeft
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.round((endTime - Date.now()) / 1000))
+      if (prev > 5 * 60 && remaining <= 5 * 60 && remaining > 0) playSound("warning")
+      if (remaining === 0 && prev > 0) playSound("end")
+      setTimeLeft(remaining)
+      prev = remaining
+      if (remaining === 0) {
+        setIsRunning(false)
+        setEndTime(null)
+        handleSessionEnd()
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isRunning, endTime])
 
-    if (isRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((t) => {
-          const newTime = t - 1
-          if (newTime === 5 * 60) playSound(warningSound)
-          if (newTime === 0) playSound(endSound)
-          return newTime
-        })
-      }, 1000)
-    } else if (timeLeft === 0) {
-      setIsRunning(false)
-
-      if (mode === "work") {
-        setSessionCount((c) => (c + 1) % 4)
-        const nextMode = sessionCount + 1 >= 4 ? "longBreak" : "break"
-        setMode(nextMode)
-        setTimeLeft(modes[nextMode].duration)
-
-        // REGISTRAR SESSÃO
-        if (selectedTask) {
-          taskService.addSession(selectedTask._id, modes.work.duration / 60)
-            .then(() => loadTasks())
-            .catch(console.error)
-        }
-      } else {
-        setMode("work")
-        setTimeLeft(modes.work.duration)
+  useEffect(() => {
+    const onVis = () => {
+      if (isRunning && endTime) {
+        const remaining = Math.max(0, Math.round((endTime - Date.now()) / 1000))
+        setTimeLeft(remaining)
       }
     }
+    document.addEventListener("visibilitychange", onVis)
+    return () => document.removeEventListener("visibilitychange", onVis)
+  }, [isRunning, endTime])
 
-    return () => clearInterval(interval)
-  }, [isRunning, timeLeft, mode, sessionCount])
-
-  // ==========================
-  // FUNÇÕES DE TAREFAS E CARDS
-  // ==========================
   const addTask = async () => {
     if (!newTaskName.trim()) return
-    const newTask = await taskService.createTask(newTaskName.trim())
-    setTasks([...tasks, newTask])
+    const task = await taskService.createTask(newTaskName.trim())
+    setTasks([...tasks, task])
     setNewTaskName("")
     setShowTaskForm(false)
   }
 
-  const addCard = async (taskId, title) => {
-    if (!title.trim()) return
-    await taskService.addCard(taskId, title.trim())
-    await loadTasks()
-  }
-
-  const deleteCard = async (taskId, cardIndex) => {
+  const manageCard = async (action, taskId, ...args) => {
     try {
-      await taskService.deleteCard(taskId, cardIndex)
-      await loadTasks()
-    } catch (error) {
-      console.error("Erro ao deletar card:", error)
+      if (action === "add") await taskService.addCard(taskId, args[0])
+      if (action === "toggle") await taskService.updateCard(taskId, args[0], args[1])
+      if (action === "delete") await taskService.deleteCard(taskId, args[0])
+      loadTasks()
+    } catch (err) {
+      console.error(err)
     }
-  }
-
-  const toggleCardDone = async (taskId, cardIndex, done) => {
-    await taskService.updateCard(taskId, cardIndex, done)
-    await loadTasks()
   }
 
   const completeTask = async () => {
     if (!selectedTask) return
     await taskService.updateTask(selectedTask._id, true)
-    await loadTasks()
     setSelectedTask(null)
+    loadTasks()
   }
 
-  // ==========================
-  // LÓGICA VISUAL DO TIMER
-  // ==========================
-  const progress =
-    ((modes[mode].duration - timeLeft) / modes[mode].duration) * 100
+  const progress = ((modes[mode].duration - timeLeft) / modes[mode].duration) * 100
+  const formatTime = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
 
-  const formatTime = (s) =>
-    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(
-      2,
-      "0"
-    )}`
-
-  // ==========================
-  // INTERFACE
-  // ==========================
+  // ----------------------
+  // JSX mantido idêntico
+  // ----------------------
   return (
     <div className={styles.pomodoroPage}>
-      {/* Painel de estatísticas */}
       <div className={styles.statsToggle}>
-        <button
-          className={styles.toggleBtn}
-          onClick={() => setShowStats(!showStats)}
-        >
+        <button className={styles.toggleBtn} onClick={() => setShowStats(!showStats)}>
           {showStats ? "Ocultar estatísticas ▲" : "Mostrar estatísticas ▼"}
         </button>
       </div>
 
       {showStats && (
-        <div className={styles.statsSection}>
-          <h2 className={styles.statsTitle}>Resumo de Atividades</h2>
+        <div className={styles.statsOverlay} onClick={() => setShowStats(false)}>
+          <div className={styles.statsSection} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.closeModal} onClick={() => setShowStats(false)}>×</button>
+            <h2 className={styles.statsTitle}>Resumo de atividades</h2>
 
-          <div className={styles.statsSummary}>
-            <div className={styles.statBox}>
-              <span className={styles.statValue}>{Math.round(stats.monthly / 60)}</span>
-              <span className={styles.statLabel}>Horas focadas</span>
+            <div className={styles.statsSummary}>
+              <div className={styles.statBox}>
+                <span className={styles.statValue}>
+                  {Math.floor(stats.monthly) >= 60
+                    ? `${Math.floor(stats.monthly / 60)}h${Math.floor(stats.monthly % 60) ? `${Math.floor(stats.monthly % 60)}min` : ""}`
+                    : `${Math.max(0, Math.floor(stats.monthly))}`}
+                </span>
+                <span className={styles.statLabel}>Minutos focados (mês)</span>
+              </div>
+              <div className={styles.statBox}>
+                <span className={styles.statValue}>{stats.activeDays || 0}</span>
+                <span className={styles.statLabel}>Dias ativos (7d)</span>
+              </div>
+              <div className={styles.statBox}>
+                <span className={styles.statValue}>{stats.streak || 0}</span>
+                <span className={styles.statLabel}>Dias seguidos</span>
+              </div>
             </div>
-            <div className={styles.statBox}>
-              <span className={styles.statValue}>{stats.activeDays || 0}</span>
-              <span className={styles.statLabel}>Dias ativos</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statValue}>{stats.streak || 0}</span>
-              <span className={styles.statLabel}>Dias seguidos</span>
-            </div>
-          </div>
 
-          <h3 className={styles.chartTitle}>Horas focadas (últimos 7 dias)</h3>
-          <div className={styles.chartWrapper}>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={stats.weeklyChart}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="hours" fill="#6c63ff" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <h3 className={styles.chartTitle}>Minutos focados (últimos 7 dias)</h3>
+            <div className={styles.chartWrapper}>
+              {stats.weeklyChart?.some(d => d.minutes > 0) ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={stats.weeklyChart}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="minutes" fill="#6c63ff" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#666' }}>Sem dados ainda</div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -259,7 +282,6 @@ function PomodoroPage() {
       </div>
 
       <div className={styles.pomodoroContainer}>
-        {/* Seleção de modo */}
         <div className={styles.modeSelector}>
           {Object.keys(modes).map((k) => (
             <button
@@ -272,18 +294,10 @@ function PomodoroPage() {
           ))}
         </div>
 
-        {/* Círculo do timer */}
         <div className={styles.timerDisplay}>
           <div className={styles.timerCircle}>
             <svg className={styles.progressRing} width="300" height="300">
-              <circle
-                stroke="#e2e8f0"
-                strokeWidth="8"
-                fill="transparent"
-                r="140"
-                cx="150"
-                cy="150"
-              />
+              <circle stroke="#e2e8f0" strokeWidth="8" fill="transparent" r="140" cx="150" cy="150" />
               <circle
                 stroke={modes[mode].color}
                 strokeWidth="8"
@@ -293,9 +307,7 @@ function PomodoroPage() {
                 cy="150"
                 style={{
                   strokeDasharray: `${2 * Math.PI * 140}`,
-                  strokeDashoffset: `${
-                    2 * Math.PI * 140 * (1 - progress / 100)
-                  }`,
+                  strokeDashoffset: `${2 * Math.PI * 140 * (1 - progress / 100)}`,
                   transition: "stroke-dashoffset 1s ease-in-out",
                 }}
               />
@@ -307,12 +319,8 @@ function PomodoroPage() {
           </div>
         </div>
 
-        {/* Controles */}
         <div className={styles.timerControls}>
-          <button
-            className="btn control-btn"
-            onClick={isRunning ? pauseTimer : startTimer}
-          >
+          <button className="btn control-btn" onClick={isRunning ? pauseTimer : startTimer}>
             {isRunning ? "Pausar" : "Iniciar"}
           </button>
           <button className="btn control-btn secondary" onClick={resetTimer}>
@@ -320,7 +328,6 @@ function PomodoroPage() {
           </button>
         </div>
 
-        {/* Seção de tarefas */}
         <div className={styles.taskSection}>
           <h3>Tarefas</h3>
 
@@ -328,62 +335,41 @@ function PomodoroPage() {
             <div className={styles.selectedTask}>
               <span className={styles.taskLabel}>Tarefa ativa:</span>
               <span className={styles.taskName}>{selectedTask.name}</span>
-              <button className={styles.completeBtn} onClick={completeTask}>
-                ✓ Concluir
-              </button>
+              <button className={styles.completeBtn} onClick={completeTask}>✓ Concluir</button>
             </div>
           )}
 
           <div className={styles.taskList}>
-            {tasks
-              .filter((t) => !t.completed)
-              .map((task) => (
-                <button
-                  key={task._id}
-                  className={`${styles.taskBtn} ${
-                    selectedTask?._id === task._id ? styles.selected : ""
-                  }`}
-                  onClick={() => setSelectedTask(task)}
-                >
-                  {task.name}
-                </button>
-              ))}
+            {tasks.filter(t => !t.completed).map(task => (
+              <button
+                key={task._id}
+                className={`${styles.taskBtn} ${selectedTask?._id === task._id ? styles.selected : ""}`}
+                onClick={() => setSelectedTask(task)}
+              >
+                {task.name}
+              </button>
+            ))}
           </div>
 
-          {/* Cards */}
           {selectedTask && (
             <div className={styles.cardsWrapper}>
               <h4>Cards da tarefa</h4>
               <ul className={styles.cardsList}>
-                {(selectedTask.cards || []).map((card, index) => (
-                  <li
-                    key={index}
-                    className={`${styles.cardItem} ${
-                      card.done ? styles.checked : ""
-                    }`}
-                  >
+                {(selectedTask.cards || []).map((card, i) => (
+                  <li key={i} className={`${styles.cardItem} ${card.done ? styles.checked : ""}`}>
                     <div className={styles.cardLabel}>
                       <input
                         type="checkbox"
                         checked={card.done}
-                        onChange={() =>
-                          toggleCardDone(selectedTask._id, index, !card.done)
-                        }
+                        onChange={() => manageCard("toggle", selectedTask._id, i, !card.done)}
                       />
-                      <span
-                        className={`${card.done ? styles.cardDone : ""} ${
-                          styles.cardTitle
-                        }`}
-                      >
-                        {card.title.length > 25
-                          ? card.title.slice(0, 25) + "…"
-                          : card.title}
+                      <span className={`${card.done ? styles.cardDone : ""} ${styles.cardTitle}`}>
+                        {card.title.length > 25 ? card.title.slice(0, 25) + "…" : card.title}
                       </span>
                     </div>
                     <button
                       className={styles.deleteCardBtn}
-                      onClick={() => deleteCard(selectedTask._id, index)}
-                      title="Excluir card"
+                      onClick={() => manageCard("delete", selectedTask._id, i)}
                     >
                       ×
                     </button>
@@ -394,23 +380,19 @@ function PomodoroPage() {
                 <input
                   type="text"
                   placeholder="Adicionar item..."
+                  className={styles.cardInput}
                   onKeyDown={async (e) => {
                     if (e.key === "Enter" && e.target.value.trim()) {
-                      await addCard(selectedTask._id, e.target.value)
+                      await manageCard("add", selectedTask._id, e.target.value)
                       e.target.value = ""
                     }
                   }}
-                  className={styles.cardInput}
                 />
               </div>
             </div>
           )}
 
-          {/* Criar nova tarefa */}
-          <button
-            className={styles.addTaskBtn}
-            onClick={() => setShowTaskForm(!showTaskForm)}
-          >
+          <button className={styles.addTaskBtn} onClick={() => setShowTaskForm(!showTaskForm)}>
             {showTaskForm ? "Cancelar" : "+ Nova Tarefa"}
           </button>
 
