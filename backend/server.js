@@ -1,9 +1,10 @@
-require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const connectDB = require('./src/config/db')
 const authRoutes = require('./src/routes/auth')
 const taskRoutes = require('./src/routes/tasks')
+const { notFound, errorHandler } = require('./src/middleware/errorHandler')
+const { port } = require('./src/config/env')
 
 const app = express()
 
@@ -16,5 +17,7 @@ app.get('/', (req, res) => res.json({ message: 'API da Central de Estudos 🚀' 
 app.use('/auth', authRoutes)
 app.use('/tasks', taskRoutes)
 
-const PORT = process.env.PORT || 3001
-app.listen(PORT, () => console.log(`✅ Servidor rodando em http://localhost:${PORT}`))
+app.use(notFound)
+app.use(errorHandler)
+
+app.listen(port, () => console.log(`✅ Servidor rodando em http://localhost:${port}`))

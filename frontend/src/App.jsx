@@ -7,7 +7,8 @@ import PomodoroPage from "./pages/PomorodoPage";
 import NotesPage from "./pages/NotesPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import { AuthProvider, AuthContext } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthProvider";
+import { AuthContext } from "./context/AuthContext";
 import { useContext } from "react";
 
 function ProtectedRoute({ children }) {

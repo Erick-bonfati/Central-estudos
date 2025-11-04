@@ -1,31 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import styles from "./NotesPage.module.css";
-import { taskService } from "../services/taskService";
+import { useTasks } from "../hooks/useTasks";
 
 function NotesPage() {
-  const [notes, setNotes] = useState([]);
-  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const {
+    tasks,
+    createTask,
+    deleteTask,
+    addCard,
+    deleteCard,
+    updateCard,
+    updateTaskCompletion,
+  } = useTasks();
+
   const [showForm, setShowForm] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [newNoteTitle, setNewNoteTitle] = useState("");
 
-  useEffect(() => {
-    loadNotes();
-  }, []);
+  const visibleNotes = useMemo(
+    () => tasks.filter((note) => !hideCompleted || !note.completed),
+    [tasks, hideCompleted]
+  );
 
-  const loadNotes = async () => {
+  const handleAddNote = async () => {
+    const title = newNoteTitle.trim();
+    if (!title) return;
     try {
-      const tasksData = await taskService.getTasks();
-      setNotes(tasksData);
-    } catch (error) {
-      console.error("Erro ao carregar anotações:", error);
-    }
-  };
-
-  const addNote = async () => {
-    if (!newNoteTitle.trim()) return;
-    try {
-      const newTask = await taskService.createTask(newNoteTitle.trim());
-      setNotes([...notes, newTask]);
+      await createTask(title);
       setNewNoteTitle("");
       setShowForm(false);
     } catch (error) {
@@ -34,53 +35,47 @@ function NotesPage() {
     }
   };
 
-  const deleteNote = async (id) => {
+  const handleDeleteNote = async (id) => {
     try {
-      await taskService.deleteTask(id);
-      setNotes(notes.filter((note) => note._id !== id));
+      await deleteTask(id);
     } catch (error) {
       console.error("Erro ao deletar anotação:", error);
     }
   };
 
-  const addCard = async (taskId, cardTitle) => {
-    if (!cardTitle.trim()) return;
+  const handleAddCard = async (taskId, cardTitle) => {
+    const title = cardTitle.trim();
+    if (!title) return;
     try {
-      await taskService.addCard(taskId, cardTitle.trim());
-      await loadNotes();
+      await addCard(taskId, title);
     } catch (error) {
       console.error("Erro ao adicionar card:", error);
     }
   };
 
-  const deleteCard = async (taskId, cardIndex) => {
+  const handleDeleteCard = async (taskId, cardIndex) => {
     try {
-      await taskService.deleteCard(taskId, cardIndex)
-      await loadNotes()
+      await deleteCard(taskId, cardIndex);
     } catch (error) {
-      console.error('Erro ao deletar card:', error)
+      console.error("Erro ao deletar card:", error);
     }
-  }
+  };
 
-  const toggleCardDone = async (taskId, cardIndex, done) => {
+  const handleToggleCard = async (taskId, cardIndex, done) => {
     try {
-      await taskService.updateCard(taskId, cardIndex, done);
-      await loadNotes();
+      await updateCard(taskId, cardIndex, done);
     } catch (error) {
       console.error("Erro ao atualizar card:", error);
     }
   };
 
-  const completeTask = async (taskId) => {
+  const handleCompleteTask = async (taskId) => {
     try {
-      await taskService.updateTask(taskId, true);
-      await loadNotes();
+      await updateTaskCompletion(taskId, true);
     } catch (error) {
       console.error("Erro ao concluir tarefa:", error);
     }
   };
-
-  const visibleNotes = notes.filter((n) => !hideCompleted || !n.completed);
 
   return (
     <div className={styles.notesPage}>
@@ -108,9 +103,9 @@ function NotesPage() {
             value={newNoteTitle}
             onChange={(e) => setNewNoteTitle(e.target.value)}
             className={styles.formInput}
-            onKeyDown={(e) => e.key === "Enter" && addNote()}
+            onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
           />
-          <button className="btn" onClick={addNote}>
+          <button className="btn" onClick={handleAddNote}>
             Salvar
           </button>
         </div>
@@ -137,7 +132,7 @@ function NotesPage() {
                   )}
                   <button
                     className={styles.deleteBtn}
-                    onClick={() => deleteNote(note._id)}
+                    onClick={() => handleDeleteNote(note._id)}
                   >
                     ×
                   </button>
@@ -157,7 +152,7 @@ function NotesPage() {
                         type="checkbox"
                         checked={card.done}
                         onChange={() =>
-                          toggleCardDone(note._id, index, !card.done)
+                          handleToggleCard(note._id, index, !card.done)
                         }
                       />
                       <span className={card.done ? styles.cardDone : ""}>
@@ -168,7 +163,7 @@ function NotesPage() {
                     <div className={styles.cardButtons}>
                       <button
                         className={styles.deleteCardBtn}
-                        onClick={() => deleteCard(note._id, index)}
+                        onClick={() => handleDeleteCard(note._id, index)}
                         title="Excluir card"
                       >
                         ×
@@ -178,18 +173,18 @@ function NotesPage() {
                 ))}
               </ul>
 
-              <div className={styles.addCard}>
-                <input
-                  type="text"
-                  placeholder="Adicionar item..."
-                  onKeyDown={async (e) => {
-                    if (e.key === "Enter" && e.target.value.trim()) {
-                      await addCard(note._id, e.target.value);
-                      e.target.value = "";
-                    }
-                  }}
-                  className={styles.cardInput}
-                />
+                  <div className={styles.addCard}>
+                    <input
+                      type="text"
+                      placeholder="Adicionar item..."
+                      onKeyDown={async (e) => {
+                        if (e.key === "Enter" && e.target.value.trim()) {
+                          await handleAddCard(note._id, e.target.value);
+                          e.target.value = "";
+                        }
+                      }}
+                      className={styles.cardInput}
+                    />
               </div>
 
               <div className={styles.noteFooter}>
@@ -199,7 +194,7 @@ function NotesPage() {
                 {canComplete && !note.completed && (
                   <button
                     className="btn"
-                    onClick={() => completeTask(note._id)}
+                    onClick={() => handleCompleteTask(note._id)}
                   >
                     Concluir tarefa
                   </button>
