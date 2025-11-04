@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import styles from "./PomodoroPage.module.css"
 import { taskService } from "../services/taskService"
+import { useBeforeUnload, useLocation } from "react-router-dom"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts"
@@ -25,6 +26,65 @@ function PomodoroPage() {
   const [stats, setStats] = useState({ daily: 0, weekly: 0, monthly: 0, activeDays: 0, streak: 0, weeklyChart: [] })
   const [loggedMinutes, setLoggedMinutes] = useState(0)
   const [endTime, setEndTime] = useState(null)
+  const location = useLocation()
+  const stayUrlRef = useRef(window.location.href)
+
+  useBeforeUnload(
+    (event) => {
+      if (isRunning) {
+        event.preventDefault()
+        event.returnValue = ""
+      }
+    },
+    isRunning
+  )
+
+  useEffect(() => {
+    stayUrlRef.current = window.location.href
+  }, [location])
+
+  useEffect(() => {
+    if (!isRunning) return
+
+    const message = "O timer está em execução. Deseja sair desta página?"
+    const originalPush = window.history.pushState
+    const originalReplace = window.history.replaceState
+
+    const confirmExit = () => window.confirm(message)
+
+    const handlePopState = () => {
+      if (confirmExit()) {
+        cleanup()
+      } else {
+        originalPush.call(window.history, window.history.state, document.title, stayUrlRef.current)
+        stayUrlRef.current = window.location.href
+      }
+    }
+
+    const cleanup = () => {
+      window.history.pushState = originalPush
+      window.history.replaceState = originalReplace
+      window.removeEventListener("popstate", handlePopState)
+    }
+
+    window.history.pushState = function (...args) {
+      if (confirmExit()) {
+        cleanup()
+        return originalPush.apply(window.history, args)
+      }
+    }
+
+    window.history.replaceState = function (...args) {
+      if (confirmExit()) {
+        cleanup()
+        return originalReplace.apply(window.history, args)
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState)
+
+    return cleanup
+  }, [isRunning, location])
 
   const modes = {
     work: { duration: 25 * 60, label: "Trabalho", color: "#e53e3e" },
@@ -44,10 +104,11 @@ function PomodoroPage() {
     try {
       const data = await taskService.getTasks()
       setTasks(data)
-      if (selectedTask) {
-        const updated = data.find(t => t._id === selectedTask._id)
-        setSelectedTask(updated || null)
-      }
+      setSelectedTask(prev => {
+        if (!prev) return null
+        const updated = data.find(t => t._id === prev._id)
+        return updated || null
+      })
       calculateStats(data)
     } catch (err) {
       console.error(err)
@@ -220,9 +281,21 @@ function PomodoroPage() {
   const progress = ((modes[mode].duration - timeLeft) / modes[mode].duration) * 100
   const formatTime = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
 
-  // ----------------------
-  // JSX mantido idêntico
-  // ----------------------
+  useEffect(() => {
+    if (isRunning) {
+      document.title = formatTime(timeLeft)
+    } else {
+      document.title = "Central De Estudos"
+    }
+  }, [isRunning, timeLeft])
+
+  useEffect(() => {
+    return () => {
+      document.title = "Central De Estudos"
+    }
+  }, [])
+
+
   return (
     <div className={styles.pomodoroPage}>
       <div className={styles.statsToggle}>

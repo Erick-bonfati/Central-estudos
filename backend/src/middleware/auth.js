@@ -1,5 +1,6 @@
+require('dotenv').config()
 const jwt = require('jsonwebtoken')
-const JWT_SECRET = 'chave-super-secreta'
+const JWT_SECRET = process.env.JWT_SECRET
 
 module.exports = function (req, res, next) {
   const authHeader = req.headers.authorization

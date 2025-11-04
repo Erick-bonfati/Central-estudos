@@ -35,9 +35,6 @@ function Header() {
             <NavLink to="/login" className={({ isActive }) => (isActive ? styles.active : "")}>
               Login
             </NavLink>
-            <NavLink to="/register" className={({ isActive }) => (isActive ? styles.active : "")}>
-              Registrar-se
-            </NavLink>
           </>
         ) : (
           <button onClick={handleLogout} className={styles.logoutBtn}>

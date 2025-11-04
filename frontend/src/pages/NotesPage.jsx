@@ -120,7 +120,7 @@ function NotesPage() {
         {visibleNotes.map((note) => {
           const total = note.cards?.length || 0;
           const doneCount = note.cards?.filter((c) => c.done).length || 0;
-          const allChecked = total > 0 && doneCount === total;
+          const canComplete = total === 0 || doneCount === total;
 
           return (
             <div
@@ -196,7 +196,7 @@ function NotesPage() {
                 <div className={styles.progressText}>
                   {total > 0 ? `${doneCount}/${total} itens` : "Sem itens"}
                 </div>
-                {allChecked && !note.completed && (
+                {canComplete && !note.completed && (
                   <button
                     className="btn"
                     onClick={() => completeTask(note._id)}

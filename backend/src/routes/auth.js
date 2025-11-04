@@ -1,10 +1,11 @@
+require('dotenv').config()
 const express = require('express')
 const router = express.Router()
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcryptjs')
 const User = require('../models/User')
 
-const JWT_SECRET = 'chave-super-secreta' // depois a gente põe no .env
+const JWT_SECRET = process.env.JWT_SECRET
 
 // registrar novo usuário
 router.post('/register', async (req, res) => {
