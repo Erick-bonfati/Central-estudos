@@ -7,6 +7,7 @@ import PomodoroPage from "./pages/PomorodoPage";
 import NotesPage from "./pages/NotesPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ProgressPage from "./pages/ProgressPage";
 import { AuthProvider } from "./context/AuthProvider";
 import { AuthContext } from "./context/AuthContext";
 import { useContext } from "react";
@@ -32,6 +33,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/pomodoro" element={<PomodoroPage />} />
               <Route path="/anotacoes" element={<NotesPage />} />
+              <Route path="/progresso" element={<ProgressPage />} />
               <Route
                 path="/login"
                 element={

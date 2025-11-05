@@ -1,0 +1,101 @@
+/* Layout base */
+.page {
+  padding: 1rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Cards de totais */
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.cardTitle {
+  font-size: .85rem;
+  color: #666;
+}
+
+.cardValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Lista por tarefa */
+.taskList {
+  display: grid;
+  gap: 10px;
+}
+
+.taskItem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+}
+
+.taskName {
+  font-weight: 600;
+}
+
+.meter {
+  height: 8px;
+  background: #eee;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.meterBar {
+  height: 100%;
+  background: linear-gradient(90deg, #7b61ff, #60a5fa);
+  width: 0%;
+}
+
+/* Grade de listas simples */
+.grids {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.list {
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.list h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0,0,0,0.08);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+

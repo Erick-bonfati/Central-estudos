@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./PomodoroPage.module.css";
 import { useTasks } from "../hooks/useTasks";
 import { useExitWarning } from "../hooks/useExitWarning";
+import { AuthContext } from "../context/AuthContext";
+import { progressService } from "../services/progressService";
 import {
   BarChart,
   Bar,
@@ -55,7 +57,7 @@ function getStoredFreeSessions() {
   }
 }
 
-function calculateStats(tasks) {
+function calculateStats(tasks, includeLocal = true) {
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
   const days = Array.from({ length: 7 }, (_, index) => {
@@ -71,7 +73,7 @@ function calculateStats(tasks) {
 
   const sessions = [
     ...tasks.flatMap((task) => task.sessions || []),
-    ...getStoredFreeSessions(),
+    ...(includeLocal ? getStoredFreeSessions() : []),
   ];
 
   for (const session of sessions) {
@@ -337,8 +339,9 @@ function TaskSection({
 }
 
 function PomodoroPage() {
-  const { tasks, createTask, updateTaskCompletion, addCard, updateCard, deleteCard, addSession } =
+  const { tasks, createTask, updateTaskCompletion, addCard, updateCard, deleteCard, addSession, loadTasks } =
     useTasks();
+  const { user } = useContext(AuthContext);
 
   const [mode, setMode] = useState("work");
   const [timeLeft, setTimeLeft] = useState(MODES.work.duration);
@@ -361,8 +364,57 @@ function PomodoroPage() {
   useExitWarning(isRunning);
 
   useEffect(() => {
-    setStats(calculateStats(tasks));
-  }, [tasks, freeSessionsVersion]);
+    // ao logar, recarrega tarefas do servidor
+    if (user) loadTasks();
+  }, [user, loadTasks]);
+
+  useEffect(() => {
+    // Fallback local sempre atualizado; se logado, ignora sessões livres locais
+    setStats(calculateStats(tasks, !user));
+  }, [tasks, freeSessionsVersion, user]);
+
+  useEffect(() => {
+    // Se logado, busca resumo do backend e mapeia para o overlay
+    if (!user) return;
+    const buildWeeklyFromSummary = (dailyArr) => {
+      const map = new Map(dailyArr.map((d) => [d.date, d.minutes]));
+      const days = [];
+      const now = new Date();
+      for (let i = 6; i >= 0; i -= 1) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const label = d
+          .toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })
+          .replace(".", "");
+        days.push({ key, label, minutes: Number(map.get(key) || 0) });
+      }
+      return days;
+    };
+
+    const load = async () => {
+      try {
+        const summary = await progressService.getProgress();
+        const weeklyDays = buildWeeklyFromSummary(summary.daily || []);
+        const weekly = weeklyDays.reduce((acc, item) => acc + item.minutes, 0);
+        const daily = weeklyDays[6]?.minutes || 0;
+        const monthly = summary?.totals?.thisMonthMinutes || 0;
+        const activeDays = weeklyDays.filter((d) => d.minutes > 0).length;
+        let streak = 0;
+        for (let i = weeklyDays.length - 1; i >= 0; i -= 1) {
+          if (weeklyDays[i].minutes > 0) streak += 1;
+          else break;
+        }
+        const weeklyChart = weeklyDays.map((d) => ({ day: d.label, minutes: d.minutes }));
+        setStats({ daily, weekly, monthly, activeDays, streak, weeklyChart });
+      } catch (e) {
+        // Silencia e mantém o fallback local
+        console.warn("Falha ao carregar resumo do backend:", e?.message || e);
+      }
+    };
+
+    load();
+  }, [user, tasks, freeSessionsVersion]);
 
   useEffect(() => {
     if (!selectedTaskId) return;
@@ -386,12 +438,24 @@ function PomodoroPage() {
 
     if (selectedTaskId) {
       await addSession(selectedTaskId, delta);
+    } else if (user) {
+      // se logado e sem tarefa selecionada, registra em uma tarefa "Sessões Livres"
+      let freeTask = tasks.find((t) => t.name === "Sessões Livres" && !t.completed);
+      if (!freeTask) {
+        freeTask = await createTask("Sessões Livres");
+      }
+      if (freeTask && freeTask._id) {
+        await addSession(freeTask._id, delta);
+      } else {
+        // fallback extremo
+        recordFreeSession(delta);
+      }
     } else {
       recordFreeSession(delta);
     }
 
     setLoggedMinutes((prev) => prev + delta);
-  }, [mode, timeLeft, loggedMinutes, selectedTaskId, addSession, recordFreeSession]);
+  }, [mode, timeLeft, loggedMinutes, selectedTaskId, addSession, recordFreeSession, user, tasks, createTask]);
 
   const startTimer = useCallback(() => {
     playSound("start");

@@ -30,7 +30,7 @@ function HomePage() {
           <div className={styles.featureIcon}>📊</div>
           <h3>Progresso</h3>
           <p>Acompanhe seu progresso e mantenha-se motivado nos seus estudos.</p>
-          <button className="btn" disabled>Em Breve</button>
+          <Link to="/progresso" className="btn">Ver Progresso</Link>
         </div>
       </div>
 

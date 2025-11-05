@@ -29,6 +29,9 @@ function Header() {
         <NavLink to="/anotacoes" className={({ isActive }) => (isActive ? styles.active : "")}>
           Anotações
         </NavLink>
+        <NavLink to="/progresso" className={({ isActive }) => (isActive ? styles.active : "")}>
+          Progresso
+        </NavLink>
 
         {!user ? (
           <>
@@ -62,6 +65,7 @@ function Header() {
           <Link to="/" onClick={() => setMenuOpen(false)}>Início</Link>
           <Link to="/pomodoro" onClick={() => setMenuOpen(false)}>Pomodoro</Link>
           <Link to="/anotacoes" onClick={() => setMenuOpen(false)}>Anotações</Link>
+          <Link to="/progresso" onClick={() => setMenuOpen(false)}>Progresso</Link>
 
           {!user ? (
             <>

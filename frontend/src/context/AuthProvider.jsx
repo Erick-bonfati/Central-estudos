@@ -15,6 +15,8 @@ export function AuthProvider({ children }) {
   const login = useCallback((data) => {
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
+    // limpa sessões livres locais para evitar "soma duplicada" pós-login
+    try { localStorage.removeItem("pomodoroFreeSessions"); } catch {}
     setUser(data.user);
   }, []);
 
