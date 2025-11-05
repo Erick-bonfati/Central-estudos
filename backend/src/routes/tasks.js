@@ -3,6 +3,8 @@ const router = express.Router()
 const Task = require('../models/Task')
 const auth = require('../middleware/auth')
 const asyncHandler = require('../utils/asyncHandler')
+const User = require('../models/User')
+const { computeProgressSummary } = require('../utils/progress')
 
 const notFound = (message) => {
   const error = new Error(message)
@@ -122,6 +124,17 @@ router.put('/:id/sessions', asyncHandler(async (req, res) => {
   task.sessions = task.sessions || []
   task.sessions.push({ duration: minutes })
   await task.save()
+
+  // recomputa e persiste o resumo do usuário (não bloqueante)
+  try {
+    const summary = await computeProgressSummary(req.user.id)
+    await User.findByIdAndUpdate(req.user.id, {
+      progressSummary: summary,
+      progressUpdatedAt: new Date()
+    })
+  } catch (e) {
+    console.error('Falha ao atualizar progressSummary:', e && e.message ? e.message : e)
+  }
 
   res.json({ success: true })
 }))
