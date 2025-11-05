@@ -172,7 +172,7 @@ function ModeSelector({ currentMode, onSelect }) {
 }
 
 function TimerDisplay({ mode, timeLeft, progress }) {
-  const { color, label, duration } = MODES[mode];
+  const { color, label } = MODES[mode];
   const radius = 140;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - progress / 100);
@@ -360,6 +360,37 @@ function PomodoroPage() {
     () => tasks.find((task) => task._id === selectedTaskId) || null,
     [tasks, selectedTaskId]
   );
+
+  const bgGradient = useMemo(() => {
+    switch (mode) {
+      case "work":
+        return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+      case "break":
+        return "linear-gradient(135deg, #38a169 0%, #2f855a 100%)";
+      case "longBreak":
+        return "linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%)";
+      default:
+        return "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+    }
+  }, [mode]);
+
+  const originalBgRef = useRef({ body: "", html: "" });
+
+  useEffect(() => {
+    originalBgRef.current = {
+      body: document.body.style.background,
+      html: document.documentElement.style.background,
+    };
+    return () => {
+      document.body.style.background = originalBgRef.current.body;
+      document.documentElement.style.background = originalBgRef.current.html;
+    };
+  }, []);
+
+  useEffect(() => {
+    document.body.style.background = bgGradient;
+    document.documentElement.style.background = bgGradient;
+  }, [bgGradient]);
 
   useExitWarning(isRunning);
 
